@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { nanoid } from 'nanoid';
 
 import { Section } from './Section/Section';
@@ -7,42 +7,27 @@ import { Phonebook } from './ContactForm/ContactForm';
 import { ContactList } from './ContactList/ContactList';
 import { Filter } from './ContactFilter/ContactFilter';
 
-export class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState([
+    { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+    { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+    { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+    { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+  ]);
+  const [filter, setFilter] = useState('');
 
-  //зберігаємо контакти в локал сторедж після перезавантаження сторінки вони не зникають і виводяться на екран користувачу
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parseContacts = JSON.parse(contacts);
-    if (parseContacts?.length) {
-      this.setState({ contacts: parseContacts });
-      return;
+  useEffect(() => {
+    const contacts = JSON.parse(localStorage.getItem('contacts'));
+    if (contacts?.length) {
+      setContacts(contacts);
     }
-    this.setState({ contacts: this.state.contacts });
-  }
+  }, []);
 
-  //зберігаємо контакти в локал сторедж після додавання нового контакту вони не зникають і виводяться на екран користувачу
-  componentDidUpdate(prevState, prevProps) {
-    const nextContacts = this.state.contacts;
-    const prevContacts = prevState.contacts;
-    if (nextContacts !== prevContacts) {
-      localStorage.setItem('contacts', JSON.stringify(nextContacts));
-    }
-  }
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  //створюємо метод для додавання контактів в стейт, передаємо в пропси в компонент Phonebook
-  addContact = ({ name, number }) => {
-    const { contacts } = this.state;
-
-    //перевіряємо чи є такий контакт в потоці, якщо немає то додаємо в потік інакше виводимо алерт що такий контакт вже є в списку контактів і нічого не робимо
+  const addContact = ({ name, number }) => {
     const checkName = contacts.find(
       contact => contact.name.toLowerCase() === name.toLowerCase()
     );
@@ -58,17 +43,14 @@ export class App extends Component {
       number,
     };
 
-    this.setState(({ contacts }) => ({ contacts: [contact, ...contacts] }));
+    setContacts(prevContacts => [contact, ...prevContacts]);
   };
 
-  //створюємо метод для фільтрації контактів, коли вводимо в інпут значення то відбувається фільтрація і виводяться тільки ті контакти в яких є введені значення
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
+  const changeFilter = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  //створємо метод для фільтрації контактів відповідно до введених значень в інпут
-  getFilteredContacts = () => {
-    const { filter, contacts } = this.state;
+  const getFilteredContacts = () => {
     const normalizedFilter = filter.toLowerCase();
 
     return contacts.filter(contact =>
@@ -76,37 +58,32 @@ export class App extends Component {
     );
   };
 
-  //створюємо метод для видалення контактів, яку передаємо в пропси в компоненту ContactList для того щоб видалити контакт
-  deleteContact = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
+  const deleteContact = contactId => {
+    setContacts(prevContacts =>
+      prevContacts.filter(contact => contact.id !== contactId)
+    );
   };
 
-  render() {
-    const { contacts, filter } = this.state;
+  const filteredContacts = getFilteredContacts();
+  const isContactsEmpty = contacts.length === 0;
 
-    const filteredContacts = this.getFilteredContacts();
-
-    const isContactsEmpty = contacts.length === 0;
-    return (
-      <Container>
-        <Section title="Phonebook">
-          <Phonebook onSubmit={this.addContact} />
-        </Section>
-        <Section title="Contacts">
-          {!isContactsEmpty && (
-            <>
-              <Filter value={filter} onChange={this.changeFilter} />
-              <ContactList
-                contacts={filteredContacts}
-                onDeleteContact={this.deleteContact}
-              />
-            </>
-          )}
-          {isContactsEmpty && <p>There are no contacts yet</p>}
-        </Section>
-      </Container>
-    );
-  }
-}
+  return (
+    <Container>
+      <Section title="Phonebook">
+        <Phonebook onSubmit={addContact} />
+      </Section>
+      <Section title="Contacts">
+        {!isContactsEmpty && (
+          <>
+            <Filter value={filter} onChange={changeFilter} />
+            <ContactList
+              contacts={filteredContacts}
+              onDeleteContact={deleteContact}
+            />
+          </>
+        )}
+        {isContactsEmpty && <p>There are no contacts yet</p>}
+      </Section>
+    </Container>
+  );
+};
